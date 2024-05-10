@@ -1,7 +1,13 @@
-"""Implementation of the classic  word-guessing Hangman game. The player
+"""Implementation of the classic word-guessing Hangman game. The player
 tries to guess a hidden word, letter by letter. """
 
 import random
+
+difficulty_level = {
+    'easy': 10,
+    'medium': 7,
+    'hard': 5
+}
 
 def get_random_word():
     """Pick a random word from a list of words"""
@@ -20,7 +26,7 @@ def user_interface(count_wrong, count_guesses, guessed_letters, display_word):
     print("Wrong guesses:", count_wrong)
     print("Guessed letters:", guessed_letters)
 
-def play_game():
+def play_game(difficulty):
     """Main game logic."""
     word = get_random_word()
     word_length = len(word)
@@ -32,7 +38,9 @@ def play_game():
 
     user_interface(count_wrong, count_guesses, guessed_letters, display_word)
 
-    while count_wrong < 10 and remaining_letters > 0:
+    wrong_guesses = difficulty_level.get(difficulty, 10) #set to 10 if no other level is chosed
+
+    while count_wrong < wrong_guesses and remaining_letters > 0:
         guess = get_letter(guessed_letters) #Get letter from the player and concatenate it to the guessed letters
         guessed_letters += guess
 
@@ -77,7 +85,14 @@ if __name__ == "__main__":
 
     print("Welcome to Hangman!")
     while True:
-        play_game()
+
+        difficulty = input("Choose difficulty - easy, medium or hard: ").lower()
+        if difficulty not in difficulty_level:
+            print("Invalid difficulty level. Please choose from easy, medium, or hard.")
+            continue
+
+        play_game(difficulty)
+
         retry = input("\nWould you like to play again? (yes/no): ").lower()
         if retry not in {"yes", "y", 'ye'}:
             break
