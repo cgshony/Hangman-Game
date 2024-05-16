@@ -1,7 +1,6 @@
-"""Implementation of the classic word-guessing Hangman game. The player
-tries to guess a hidden word, letter by letter. """
-
 import random
+import tkinter as tk
+from tkinter import messagebox
 
 difficulty_level = {
     'easy': 10,
@@ -9,90 +8,122 @@ difficulty_level = {
     'hard': 5
 }
 
-def get_random_word():
-    """Pick a random word from a list of words"""
-    try:
-        with open("words.txt", "r") as file:
-            words = file.read().splitlines()
-            return random.choice(words).upper()
-    except FileNotFoundError:
-        print("File not found.")
-        return None
 
-def user_interface(count_wrong, count_guesses, guessed_letters, display_word):
-    """Display the basic game interface."""
-    print("\nHangman Game!")
-    print("Word:", display_word)
-    print("Wrong guesses:", count_wrong)
-    print("Guessed letters:", guessed_letters)
+class HangmanGame:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Hangman Game")
+        self.root.geometry("600x400")
+        self.root.resizable(False, False)
 
-def play_game(difficulty):
-    """Main game logic."""
-    word = get_random_word()
-    word_length = len(word)
-    remaining_letters = word_length
-    display_word = "_" * word_length
-    count_wrong = 0
-    count_guesses = 0
-    guessed_letters = ""
+        self.word = ""
+        self.display_word = ""
+        self.remaining_letters = 0
+        self.count_wrong = 0
+        self.guessed_letters = ""
+        self.difficulty = "easy"
+        self.wrong_guesses = 0
 
-    user_interface(count_wrong, count_guesses, guessed_letters, display_word)
+        self.create_interface()
 
-    wrong_guesses = difficulty_level.get(difficulty, 10) #set to 10 if no other level is chosed
+    def create_interface(self):
+        self.top_frame = tk.Frame(self.root, bg='black')
+        self.top_frame.pack(fill=tk.BOTH, expand=True)
 
-    while count_wrong < wrong_guesses and remaining_letters > 0:
-        guess = get_letter(guessed_letters) #Get letter from the player and concatenate it to the guessed letters
-        guessed_letters += guess
+        self.game_title = tk.Label(
+            self.top_frame, bg='black', fg='white', text='Hangman Game', font=('', 24)
+        )
+        self.game_title.pack(pady=10)
 
-        if guess in word:
-            display_word = ""
-            remaining_letters = word_length
+        self.word_label = tk.Label(self.top_frame, bg='black', fg='white', text='', font=('', 18))
+        self.word_label.pack(pady=10)
 
-            for letter in word:
-                if letter in guessed_letters:
-                    display_word += letter
-                    remaining_letters -= 1
-                else:
-                    display_word += "_"
+        self.info_label = tk.Label(self.top_frame, bg='black', fg='white', text='', font=('', 14))
+        self.info_label.pack(pady=10)
+
+        self.entry_frame = tk.Frame(self.root, bg='black')
+        self.entry_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.letter_entry = tk.Entry(self.entry_frame, font=('', 18))
+        self.letter_entry.pack(pady=10)
+
+        self.guess_button = tk.Button(
+            self.entry_frame, text="Guess", command=self.make_guess, font=('', 18)
+        )
+        self.guess_button.pack(pady=10)
+
+        self.difficulty_frame = tk.Frame(self.root, bg='black')
+        self.difficulty_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.create_difficulty_buttons()
+
+    def create_difficulty_buttons(self):
+        difficulties = ["Easy", "Medium", "Hard"]
+        for difficulty in difficulties:
+            button = tk.Button(
+                self.difficulty_frame, text=difficulty, command=lambda d=difficulty: self.set_difficulty(d),
+                font=('', 14)
+            )
+            button.pack(side=tk.LEFT, padx=10)
+
+    def set_difficulty(self, difficulty):
+        self.difficulty = difficulty.lower()
+        self.wrong_guesses = difficulty_level[self.difficulty]
+        self.reset_game()
+
+    def reset_game(self):
+        self.word = self.get_random_word()
+        self.display_word = "_" * len(self.word)
+        self.remaining_letters = len(self.word)
+        self.count_wrong = 0
+        self.guessed_letters = ""
+
+        self.update_display()
+
+    def get_random_word(self):
+        try:
+            with open("words.txt", "r") as file:
+                words = file.read().splitlines()
+                return random.choice(words).upper()
+        except FileNotFoundError:
+            messagebox.showerror("Error", "File not found.")
+            self.root.quit()
+
+    def update_display(self):
+        self.word_label.config(text=" ".join(self.display_word))
+        self.info_label.config(
+            text=f"Wrong guesses: {self.count_wrong}\nGuessed letters: {', '.join(self.guessed_letters)}"
+        )
+
+    def make_guess(self):
+        guess = self.letter_entry.get().strip().upper()
+        self.letter_entry.delete(0, tk.END)
+
+        if not guess.isalpha() or len(guess) != 1 or guess in self.guessed_letters:
+            messagebox.showwarning("Invalid Input", "Please enter a valid letter.")
+            return
+
+        self.guessed_letters += guess
+
+        if guess in self.word:
+            self.display_word = "".join(
+                [letter if letter in self.guessed_letters else "_" for letter in self.word]
+            )
+            self.remaining_letters = self.display_word.count("_")
         else:
-            count_wrong += 1
+            self.count_wrong += 1
 
-        count_guesses += 1
+        self.update_display()
 
-        user_interface(count_wrong, count_guesses, guessed_letters, display_word)
-
-    if remaining_letters == 0:
-        print("Congratulations! You win in", count_guesses, "guesses")
-    else:
-        print("You lost! The word was:", word)
-
-def get_letter(guessed_letters):
-    """Get a valid letter guess from the player."""
-    while True:
-        guess = input("\nGuess a letter: ").strip().upper()
-        if not guess.isalpha():
-            print("Invalid input. Please enter a letter.")
-        elif guess == "" or len(guess) > 1:
-            print("Invalid input. Please enter only one letter.")
-        elif guess in guessed_letters:
-            print("You have already guessed this letter.")
-        else:
-            return guess
+        if self.remaining_letters == 0:
+            messagebox.showinfo("Congratulations!", f"You win! The word was {self.word}")
+            self.reset_game()
+        elif self.count_wrong >= self.wrong_guesses:
+            messagebox.showinfo("Game Over", f"You lost! The word was {self.word}")
+            self.reset_game()
 
 
 if __name__ == "__main__":
-    """Start the game."""
-
-    print("Welcome to Hangman!")
-    while True:
-
-        difficulty = input("Choose difficulty - easy, medium or hard: ").lower()
-        if difficulty not in difficulty_level:
-            print("Invalid difficulty level. Please choose from easy, medium, or hard.")
-            continue
-
-        play_game(difficulty)
-
-        retry = input("\nWould you like to play again? (yes/no): ").lower()
-        if retry not in {"yes", "y", 'ye'}:
-            break
+    root = tk.Tk()
+    game = HangmanGame(root)
+    root.mainloop()
